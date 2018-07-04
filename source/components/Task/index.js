@@ -133,7 +133,7 @@ export default class Task extends PureComponent {
     }
 
     render () {
-        const { completed, favorite} = this.props;
+        const { completed, favorite } = this.props;
         const { newMessage, isTaskEditing } = this.state;
 
         return (
