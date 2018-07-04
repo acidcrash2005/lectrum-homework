@@ -44,16 +44,12 @@ export const api = {
                 Authorization:  TOKEN,
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ ...taskProps }),
+            body: JSON.stringify([taskProps]),
         });
 
         if (response.status !== 200) {
             throw new Error('Task were not updated');
         }
-
-        const { data: task } = await response.json();
-
-        return task;
     },
     async removeTask (id) {
         const response = await fetch(`${MAIN_URL}/${id}`, {
@@ -64,27 +60,30 @@ export const api = {
         });
 
         if (response.status !== 204) {
-            throw new Error('Task were not updated');
+            throw new Error('Task were not removed');
         }
     },
-    async completeAllTasks (tasks) {
-        const tasksFetch = tasks.map((taskProps) => {
+    async completeAllTasks (tasksList) {
+        const tasksFetch =  tasksList.map((taskProps) => {
             return fetch(`${MAIN_URL}`, {
                 method:  'PUT',
                 headers: {
                     Authorization:  TOKEN,
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ ...taskProps }),
+                body: JSON.stringify([taskProps]),
             });
         });
 
-        await Promise.all(tasksFetch)
-            .then(
-                (results) => results,
-                (error) => {
-                    throw new Error(`Tasks were not updated. Error: ${error.message}`);
-                },
-            );
+        await Promise.all(tasksFetch).then(
+            (resolve) => {
+                resolve.forEach((response) => {
+                    if (response.status !== 200) {
+                        throw new Error('Task were not updated');
+                    }
+                });
+            },
+            (error) => `Tasks were not updated ${error.message}`
+        );
     },
 };

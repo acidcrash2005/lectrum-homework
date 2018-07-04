@@ -3,12 +3,13 @@ import React, { Component } from 'react';
 
 // Instruments
 import Styles from './styles.m.css';
-import Checkbox from 'theme/assets/Checkbox';
-import { api } from 'REST/api';
+import Checkbox from '../../theme/assets/Checkbox';
+import { api } from '../../REST';
 
 //Components
-import Spinner from 'components/Spinner';
-import Task from 'components/Task';
+import Spinner from '../Spinner';
+import Task from '../Task';
+import FlipMove from 'react-flip-move';
 
 export default class Scheduler extends Component {
 
@@ -89,16 +90,61 @@ export default class Scheduler extends Component {
         return null;
     }
 
-    _updateTaskAsync = () => {
+    _updateTaskAsync = async (taskProps) => {
+        try {
+            this._setTasksFetchingState(true);
 
+            await api.updateTask(taskProps);
+
+        } catch ({ message }) {
+            console.log(message);
+        } finally {
+            this._setTasksFetchingState(false);
+        }
     }
 
-    _removeTaskAsync = () => {
+    _removeTaskAsync = async (id) => {
+        try {
+            this._setTasksFetchingState(true);
+            await api.removeTask(id);
 
+        } catch ({ message }) {
+            console.log(message);
+        } finally {
+            this._setTasksFetchingState(false);
+        }
     }
 
-    _completeAllTasksAsync = () => {
+    _completeAllTasksAsync = async () => {
+        const notCompletedTasks = this.state.tasks.filter((task) => {
+            return task.completed === false;
+        });
 
+        if (notCompletedTasks.length !== 0) {
+            this._setTasksFetchingState(true);
+            try {
+                await api.completeAllTasks(notCompletedTasks.map((task) => {
+                    task.completed = true;
+
+                    return task;
+                }));
+
+                this.setState(({ tasks }) => ({
+                    tasks: tasks.map((task) => {
+                        task.completed = true;
+
+                        return task;
+                    }),
+                }));
+
+            } catch ({ message }) {
+                console.log(message);
+            } finally {
+                this._setTasksFetchingState(false);
+            }
+        } else {
+            return null;
+        }
     }
 
 
@@ -139,10 +185,19 @@ export default class Scheduler extends Component {
                         </form>
                         <div className = { Styles.overlay }>
                             <ul>
-                                { tasks.map((props) => {
-                                    return <Task key = { props.id } { ...props } />;
-                                }) }
-
+                                <FlipMove duration = { 400 }>
+                                    { tasks.map((props) => (
+                                        <Task
+                                            _removeTaskAsync = { this._removeTaskAsync }
+                                            _updateTaskAsync = { this._updateTaskAsync }
+                                            completed = { props.completed }
+                                            favorite = { props.favorite }
+                                            id = { props.id }
+                                            key = { props.id }
+                                            message = { props.message }
+                                        />
+                                    )) }
+                                </FlipMove>
                             </ul>
                         </div>
                     </section>
