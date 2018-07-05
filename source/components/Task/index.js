@@ -1,5 +1,6 @@
 // Core
 import React, { PureComponent } from 'react';
+import cx from "classnames";
 
 // Instruments
 import Styles from './styles.m.css';
@@ -136,8 +137,12 @@ export default class Task extends PureComponent {
         const { completed, favorite } = this.props;
         const { newMessage, isTaskEditing } = this.state;
 
+        const style = cx(Styles.task, {
+            [Styles.completed]: completed,
+        });
+
         return (
-            <li className = { Styles.task }>
+            <li className = { style }>
                 <div className = { Styles.content }>
                     <Checkbox
                         inlineBlock

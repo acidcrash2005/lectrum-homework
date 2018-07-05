@@ -5,6 +5,7 @@ import React, { Component } from 'react';
 import Styles from './styles.m.css';
 import Checkbox from '../../theme/assets/Checkbox';
 import { api } from '../../REST';
+import { sortTasksByGroup } from '../../instruments/helpers';
 
 //Components
 import Spinner from '../Spinner';
@@ -23,12 +24,14 @@ export default class Scheduler extends Component {
     componentDidMount () {
         this._fetchTasksAsync();
     }
+
     _updateTasksFilter = (e) => {
         const { value } = e.target;
 
-        this.setState({ tasksFilter: value.toLocaleLowerCase() });
+        this.setState({
+            tasksFilter: value.toLocaleLowerCase(),
+        });
     }
-
 
     _updateNewTaskMessage = (e) => {
         const { value: newTaskMessage } = e.target;
@@ -57,7 +60,7 @@ export default class Scheduler extends Component {
             this._setTasksFetchingState(true);
             const tasks = await api.fetchTasks();
 
-            this.setState({ tasks });
+            this.setState({ tasks: sortTasksByGroup(tasks) });
         } catch ({ message }) {
             console.log(message);
         } finally {
@@ -77,7 +80,7 @@ export default class Scheduler extends Component {
 
                 this.setState((prevState) => ({
                     // first argument prevState
-                    tasks:          [task, ...prevState.tasks],
+                    tasks:          sortTasksByGroup([task, ...prevState.tasks]),
                     newTaskMessage: '',
                 }));
             } catch ({ message }) {
@@ -91,10 +94,20 @@ export default class Scheduler extends Component {
     }
 
     _updateTaskAsync = async (taskProps) => {
+        const { tasks } = this.state;
+
         try {
             this._setTasksFetchingState(true);
 
             await api.updateTask(taskProps);
+
+            const sortTask = sortTasksByGroup(tasks.map(
+                (task) => task.id === taskProps.id ? taskProps : task
+            ));
+
+            this.setState({
+                tasks: sortTask,
+            });
 
         } catch ({ message }) {
             console.log(message);
@@ -107,6 +120,13 @@ export default class Scheduler extends Component {
         try {
             this._setTasksFetchingState(true);
             await api.removeTask(id);
+
+            await this.setState(({ tasks }) => ({
+                tasks: tasks.filter(
+                    (task) => task.id !== id
+                ),
+            }));
+
 
         } catch ({ message }) {
             console.log(message);
@@ -156,6 +176,12 @@ export default class Scheduler extends Component {
             tasks,
         } = this.state;
 
+        const filtredTasks = tasks.filter(({ message }) => {
+            return message.toLocaleLowerCase().includes(tasksFilter);
+        });
+
+        const tasksList = tasksFilter ? filtredTasks : tasks;
+
         return (
             <section className = { Styles.scheduler }>
                 <main>
@@ -186,7 +212,7 @@ export default class Scheduler extends Component {
                         <div className = { Styles.overlay }>
                             <ul>
                                 <FlipMove duration = { 400 }>
-                                    { tasks.map((props) => (
+                                    { tasksList.map((props) => (
                                         <Task
                                             _removeTaskAsync = { this._removeTaskAsync }
                                             _updateTaskAsync = { this._updateTaskAsync }
@@ -203,7 +229,7 @@ export default class Scheduler extends Component {
                     </section>
                     <footer>
                         <Checkbox
-                            checked = { false }
+                            checked = { this._getAllCompleted() }
                             color1 = '#363636'
                             color2 = '#fff'
                             height = { 25 }
